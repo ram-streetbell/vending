@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#111827">
+<title>Vending Machine</title>
+<style>
+:root{font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;color:#172033;background:#f4f6f9}
+*{box-sizing:border-box}body{margin:0}header{background:#111827;color:#fff;padding:22px 18px}
+main{max-width:1000px;margin:auto;padding:22px 16px}h1{font-size:1.25rem;margin:0}
+.muted{color:#64748b;line-height:1.5}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+.card,.status{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:18px;box-shadow:0 3px 10px #0f172a08}
+button{border:0;border-radius:10px;padding:12px 15px;background:#2563eb;color:white;font-weight:650;cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}input{padding:9px;border:1px solid #cbd5e1;border-radius:8px}
+.status{white-space:pre-wrap;margin-top:18px;overflow-wrap:anywhere}.price{font-size:1.35rem;font-weight:750}
+a{color:#2563eb}
+</style></head>
+<body>
+<header><main style="padding:0"><h1>Vending Machine</h1><div style="color:#cbd5e1;margin-top:3px">Prototype storefront</div></main></header>
+<main>
+<h2>Select a product</h2>
+<p class="muted">You can create test orders in this prototype. Payment is not enabled yet, and no money will be charged.</p>
+<div id="products" class="grid">Loading products…</div>
+<div id="status" class="status">Ready.</div>
+<p><a href="/admin.html">Open admin dashboard</a></p>
+</main>
+<script>
+const money = p => new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR'}).format(p/100);
+const esc = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function loadProducts(){
+ const r=await fetch('/api/products'); if(!r.ok)throw Error('Could not load products');
+ const items=await r.json();
+ document.getElementById('products').innerHTML=items.map(p=>`<article class="card">
+ <h3>${esc(p.name)}</h3><div class="price">${money(p.pricePaise)}</div><p class="muted">Available stock: ${p.stock}</p>
+ <label>Quantity <input id="q${p.id}" type="number" min="1" max="10" value="1" style="width:68px"></label>
+ <p><button ${p.stock<1?'disabled':''} onclick="createOrder(${p.id})">Continue</button></p></article>`).join('');
+}
+async function createOrder(productId){
+ const quantity=Number(document.getElementById('q'+productId).value);
+ const status=document.getElementById('status'); status.textContent='Creating order…';
+ try{
+  const r=await fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({productId,quantity})});
+  const order=await r.json();if(!r.ok)throw Error(order.error||'Could not create order');
+  status.textContent='Order created\nOrder ID: '+order.id+'\nTotal: '+money(order.totalPaise)+'\nPayment has not been initiated. This prototype will not charge you.';
+ }catch(e){status.textContent=e.message}
+}
+loadProducts().catch(e=>document.getElementById('products').textContent=e.message);
+</script></body></html>
