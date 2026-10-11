@@ -1,0 +1,7 @@
+node_modules/
+.env
+vending.sqlite
+vending.sqlite-shm
+vending.sqlite-wal
+*.log
+.DS_Store
